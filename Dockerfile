@@ -20,10 +20,12 @@ RUN bash -c "set -o pipefail && apt-get update \
 
 USER ruby
 
-COPY --chown=ruby:ruby Gemfile* ./
-RUN bundle install
+COPY --chown=ruby:ruby Gemfile* .ruby-version ./
+RUN bundle install --deployment --without development test -j4 --retry 3 --no-cache --no-clean
 
+RUN mkdir .yarn public log tmp
 COPY --chown=ruby:ruby package.json *yarn* ./
+COPY --chown=ruby:ruby .yarn/ ./.yarn/
 RUN yarn install
 
 ARG RAILS_ENV="production"
@@ -36,7 +38,9 @@ ENV RAILS_ENV="${RAILS_ENV}" \
 COPY --chown=ruby:ruby . .
 
 RUN if [ "${RAILS_ENV}" != "development" ]; then \
-  SECRET_KEY_BASE_DUMMY=1 rails assets:precompile; fi
+  SECRET_KEY_BASE_DUMMY=1 bundle exec rails assets:precompile; fi
+
+RUN bundle exec bootsnap precompile app/ lib/ && bundle exec bootsnap precompile --gemfile
 
 CMD ["bash"]
 
@@ -51,8 +55,8 @@ ARG UID=1000
 ARG GID=1000
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends build-essential curl libpq-dev \
-  && rm -rf /var/lib/apt/lists/* /usr/share/doc /usr/share/man \
+&& apt-get install -y --no-install-recommends curl postgresql-client tzdata \
+&& rm -rf /var/lib/apt/lists/* /usr/share/doc /usr/share/man \
   && apt-get clean \
   && groupadd -g "${GID}" ruby \
   && useradd --create-home --no-log-init -u "${UID}" -g "${GID}" ruby \
@@ -72,7 +76,7 @@ COPY --chown=ruby:ruby --from=assets /usr/local/bundle /usr/local/bundle
 COPY --chown=ruby:ruby --from=assets /app/public /public
 COPY --chown=ruby:ruby . .
 
-ENTRYPOINT ["/app/bin/docker-entrypoint-web"]
+# ENTRYPOINT ["/app/bin/docker-entrypoint-web"]
 
 EXPOSE 8000
 

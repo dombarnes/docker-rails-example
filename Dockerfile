@@ -20,7 +20,7 @@ RUN bash -c "set -o pipefail && apt-get update \
 
 USER ruby
 
-COPY --chown=ruby:ruby Gemfile* .ruby-version ./
+COPY --chown=ruby:ruby Gemfile* ./
 RUN bundle install --deployment --without development test -j4 --retry 3 --no-cache --no-clean
 
 RUN mkdir .yarn public log tmp
@@ -76,7 +76,7 @@ COPY --chown=ruby:ruby --from=assets /usr/local/bundle /usr/local/bundle
 COPY --chown=ruby:ruby --from=assets /app/public /public
 COPY --chown=ruby:ruby . .
 
-# ENTRYPOINT ["/app/bin/docker-entrypoint-web"]
+ENTRYPOINT ["/app/bin/docker-entrypoint-web"]
 
 EXPOSE 8000
 
